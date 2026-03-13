@@ -1,0 +1,137 @@
+/begin HEADER
+  "BPM Solution XCP Configuration"
+  "V1.0"
+  "2026-02-27"
+/end HEADER
+
+/begin MODULE "ECU_Langcang"
+  
+  /begin MOD_PAR "Common Parameters"
+    /begin MOD_COMMON
+      ByteOrder     MSB_LAST        ; /* Intel格式 */
+      DataSize      8               ; /* 8位数据 */
+      Deposit       ABSOLUTE        ; /* 绝对地址 */
+      /* 以下为XCP特定参数 */
+      /begin IF_DATA XCP
+        /begin PROTOCOL_LAYER
+          /begin XCP_ON_CAN
+            CAN_ID_BROADCAST   0x701    ; /* 从站发送ID */
+            CAN_ID_MASTER      0x700    ; /* 主站发送ID */
+            BAUDRATE           500      ; /* 500kbps */
+          /end XCP_ON_CAN
+        /end PROTOCOL_LAYER
+        
+        /begin DAQ
+          GRANULARITY_ODT_ENTRY_SIZE_DAQ  1
+          MAX_ODT_ENTRY_SIZE_DAQ          7
+          PRESCALER_SUPPORTED             NO
+          TIMESTAMP_SUPPORTED             NO
+          TIMESTAMP_FIXED                 NO
+          PID_OFF_SUPPORTED               YES
+          OPTIMISATION_TYPE               DEFAULT
+          ADDRESS_EXTENSION_SUPPORTED     NO
+          IDENTIFICATION_FIELD_SUPPORTED  NO
+        /end DAQ
+      /end IF_DATA
+    /end MOD_COMMON
+    
+    /begin MEMORY_SEGMENT "FLASH"
+      Address       0x30000000      ; /* Flash起始地址 */
+      Size          0x00400000      ; /* 4MB Flash */
+      Offset        0x0
+      Type          CODE            ; /* 代码段 */
+    /end MEMORY_SEGMENT
+    
+    /begin MEMORY_SEGMENT "SEC_RAM"
+      Address       0x20f50000      ; /* SEC_RAM起始地址 */
+      Size          0x00030000      ; /* 192KB RAM */
+      Offset        0x0
+      Type          DATA            ; /* 数据段 */
+    /end MEMORY_SEGMENT
+
+    /begin MEMORY_SEGMENT "RAM"
+      Address       0x20f80000      ; /* RAM起始地址 */
+      Size          0x00080000      ; /* 512KB RAM */
+      Offset        0x0
+      Type          DATA            ; /* 数据段 */
+    /end MEMORY_SEGMENT
+
+    /begin MEMORY_SEGMENT "RSP_RAM"
+      Address       0x21000000      ; /* RSP_RAM起始地址 */
+      Size          0x00100000      ; /* 1024KB RAM */
+      Offset        0x0
+      Type          DATA            ; /* 数据段 */
+    /end MEMORY_SEGMENT
+  /end MOD_PAR
+  
+  /* ========== 测量变量 ========== */
+  /begin MEASUREMENT gSolFlowSts
+    LongIdentifier "Solution flow status"
+    DataType       RadarSrv_FlowSts_t
+    Address        0x20f80000       ; /* 实际地址从map文件获取 */
+    Conversion     "Word_Conv"
+    LowerLimit     0
+    UpperLimit     1
+    Format         "%3.0"
+    /* 可选：添加显示信息 */
+  /end MEASUREMENT
+
+  /begin MEASUREMENT gSolTimeInfo
+    LongIdentifier "Buff to statistics function time-consume"
+    DataType       Time_Info        
+    Address        0x20f80000       ; /* 实际地址从map文件获取 */
+    Conversion     "Word_Conv"
+    LowerLimit     0
+    UpperLimit     1
+    Format         "%3.0"
+    /* 可选：添加显示信息 */
+  /end MEASUREMENT
+  
+  /begin MEASUREMENT gRspCfg
+    LongIdentifier "Solution RSP HXX Configuration"
+    DataType       Rsp_Params_t           
+    Address        0x20f80000       ; /* 实际地址从map文件获取 */
+    Conversion     "Word_Conv"
+    LowerLimit     0
+    UpperLimit     1
+    Format         "%3.0"
+    /* 可选：添加显示信息 */
+  /end MEASUREMENT
+
+  /begin MEASUREMENT gRadioCfg
+    LongIdentifier "Solution Radio HXX Configuration"
+    DataType       Radio_Params_t           
+    Address        0x20f80000       ; /* 实际地址从map文件获取 */
+    Conversion     "Word_Conv"
+    LowerLimit     0
+    UpperLimit     1
+    Format         "%3.0"
+    /* 可选：添加显示信息 */
+  /end MEASUREMENT
+
+  /begin MEASUREMENT gSolIntlParam
+    LongIdentifier "Solution System HXX Configuration"
+    DataType       SysParams_t            
+    Address        0x20f80000       ; /* 实际地址从map文件获取 */
+    Conversion     "Word_Conv"
+    LowerLimit     0
+    UpperLimit     1
+    Format         "%3.0"
+    /* 可选：添加显示信息 */
+  /end MEASUREMENT
+
+  /* ========== 标定变量（示例） ========== */
+  
+  /* ========== 转换方法 ========== */
+  /begin COMPU_METHOD Word_Conv
+    ConversionType   RAT_FUNC       ; /* 线性转换 */
+    Format          "%3.0"
+    Coeffs          "1,0"           ; /* y = 1*x + 0 */
+    Unit            ""              ; /* 无单位 */
+  /end COMPU_METHOD
+  
+  /* ========== 记录布局（可选） ========== */
+  
+  /* ========== 组定义（可选） ========== */
+  
+/end MODULE

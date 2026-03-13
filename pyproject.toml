@@ -1,0 +1,69 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "arc-dwarf"
+version = "0.1.0"
+description = "ELF/DWARF debug info explorer with A2L calibration file support for embedded automotive systems"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+authors = [
+    { name = "rocket666" },
+]
+keywords = ["elf", "dwarf", "a2l", "embedded", "automotive", "calibration"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Debuggers",
+    "Topic :: Software Development :: Embedded Systems",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "pyelftools",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+]
+docs = [
+    "sphinx",
+    "myst-parser",
+    "sphinx-rtd-theme",
+]
+
+[project.scripts]
+arc-dwarf = "arc_dwarf.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/rocket666/arc_dwarf"
+Repository = "https://github.com/rocket666/arc_dwarf"
+Issues = "https://github.com/rocket666/arc_dwarf/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/arc_dwarf"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+src = ["src"]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.mypy]
+packages = ["arc_dwarf"]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true

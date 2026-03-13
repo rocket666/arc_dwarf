@@ -1,0 +1,14 @@
+/begin MEASUREMENT gTestVar
+  "Test variable for unit tests"
+  TestStruct_t
+  NO_COMPU_METHOD
+  0 0 0 100
+/end MEASUREMENT
+
+/begin CHARACTERISTIC gCalParam
+  "Calibration parameter for testing"
+  CalType_t
+  0x80000000
+  DAMOS_SST
+  0 NO_COMPU_METHOD 0 100
+/end CHARACTERISTIC
