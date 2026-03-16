@@ -9,6 +9,7 @@ from __future__ import annotations
 import pytest
 
 from arc_dwarf.dwarf_explorer import DwarfTypeExplorer
+from arc_dwarf.model import MemberAddress
 
 
 class TestDwarfTypeExplorerUnit:
@@ -45,3 +46,48 @@ class TestDwarfTypeExplorerUnit:
         with pytest.raises(FileNotFoundError):
             with DwarfTypeExplorer("/nonexistent/file.elf") as _ex:
                 pass
+
+
+class TestMemberAddress:
+    def test_member_address_dataclass(self):
+        """Test MemberAddress dataclass creation."""
+        ma = MemberAddress(
+            var_name="gRspCfg",
+            member_path="RspDbf2dCtrlParam.OutputAddr.obj_num_addr",
+            base_address=0x20F80000,
+            member_offset=128,
+            address=0x20F80000 + 128,
+            type_str="uint32_t",
+            sizeof=4,
+        )
+        assert ma.var_name == "gRspCfg"
+        assert ma.member_path == "RspDbf2dCtrlParam.OutputAddr.obj_num_addr"
+        assert ma.address == ma.base_address + ma.member_offset
+        assert ma.type_str == "uint32_t"
+        assert ma.sizeof == 4
+
+    def test_resolve_member_offset_type_not_found(self):
+        """Test resolve_member_offset raises when type is not found (no ELF needed)."""
+        # DwarfTypeExplorer without open() has an empty type index
+        ex = DwarfTypeExplorer.__new__(DwarfTypeExplorer)
+        ex._types_by_name = {}
+        with pytest.raises(RuntimeError, match="type not found"):
+            ex.resolve_member_offset("NonExistentType", "field")
+
+    def test_resolve_member_offset_invalid_path_token(self):
+        """Test resolve_member_offset raises on invalid path tokens."""
+        ex = DwarfTypeExplorer.__new__(DwarfTypeExplorer)
+        ex._types_by_name = {"Foo": []}
+
+        # Make find_type_die return a mock die
+        class FakeDie:
+            tag = "DW_TAG_structure_type"
+            attributes = {}
+            offset = 0
+            def iter_children(self):
+                return iter([])
+
+        ex._types_by_name = {"Foo": [(FakeDie(), None)]}
+
+        with pytest.raises(RuntimeError, match="invalid member path token"):
+            ex.resolve_member_offset("Foo", "123invalid")

@@ -382,6 +382,147 @@ class DwarfTypeExplorer:
 
         return None
     
+    def resolve_member_offset(
+        self, type_name: str, member_path: str
+    ) -> Tuple[int, str, int]:
+        """
+        沿点分成员路径逐层解析偏移量。
+
+        支持数组元素访问，如 "arr[2].field"。
+
+        参数:
+            type_name:   顶层类型名 (e.g. "Rsp_Params_t")
+            member_path: 点分成员路径 (e.g. "RspDbf2dCtrlParam.OutputAddr.obj_num_addr")
+
+        返回:
+            (accumulated_offset, final_type_str, final_sizeof) 元组
+
+        异常:
+            RuntimeError: 类型未找到或路径中任一成员不存在
+        """
+        import re as _re
+
+        die = self.find_type_die(type_name)
+        if die is None:
+            raise RuntimeError(f"type not found in DWARF: {type_name}")
+
+        # 拆分路径："a.b[3].c" -> [("a", None), ("b", 3), ("c", None)]
+        parts: List[Tuple[str, Optional[int]]] = []
+        for token in member_path.split("."):
+            m = _re.match(r'^([A-Za-z_][A-Za-z0-9_]*)(?:\[(\d+)\])?$', token)
+            if not m:
+                raise RuntimeError(f"invalid member path token: {token!r}")
+            idx = int(m.group(2)) if m.group(2) is not None else None
+            parts.append((m.group(1), idx))
+
+        total_offset = 0
+        current_die = die
+
+        for field_name, array_idx in parts:
+            resolved = self.resolve_typedefs_and_qualifiers(current_die)
+
+            if resolved.tag not in ("DW_TAG_structure_type", "DW_TAG_union_type"):
+                raise RuntimeError(
+                    f"cannot descend into non-struct/union type "
+                    f"{self.type_display_name(current_die)!r} for member {field_name!r}"
+                )
+
+            members = self.parse_struct_or_union_members(resolved)
+            found = None
+            for mbr in members:
+                if mbr.name == field_name:
+                    found = mbr
+                    break
+
+            if found is None:
+                raise RuntimeError(
+                    f"member {field_name!r} not found in "
+                    f"{self.type_display_name(current_die)!r}"
+                )
+
+            if found.offset is not None:
+                total_offset += found.offset
+
+            # 处理数组下标
+            if array_idx is not None:
+                if found.type_die is None:
+                    raise RuntimeError(f"no type info for member {field_name!r}")
+                elem_die = self.resolve_typedefs_and_qualifiers(found.type_die)
+                if elem_die.tag != "DW_TAG_array_type":
+                    raise RuntimeError(f"member {field_name!r} is not an array")
+                base_die = self._die_from_type_attr(elem_die)
+                if base_die is None:
+                    raise RuntimeError(f"cannot resolve element type of {field_name!r}")
+                elem_size = self.type_byte_size(base_die)
+                total_offset += array_idx * elem_size
+                current_die = base_die
+            else:
+                if found.type_die is not None:
+                    current_die = found.type_die
+
+        final_type = self.type_display_name(current_die)
+        final_size = self.type_byte_size(current_die)
+        return (total_offset, final_type, final_size)
+
+    def get_member_address(
+        self, var_name: str, member_path: str, type_name: Optional[str] = None
+    ) -> "MemberAddress":
+        """
+        获取变量中某个成员的运行时地址。
+
+        参数:
+            var_name:     全局变量名 (e.g. "gRspCfg")
+            member_path:  点分成员路径 (e.g. "RspDbf2dCtrlParam.OutputAddr.obj_num_addr")
+            type_name:    可选，变量的类型名。若不提供，则从 DWARF 符号信息推断。
+
+        返回:
+            MemberAddress 数据对象
+        """
+        from .model import MemberAddress
+
+        var_info = self.get_variable_info(var_name)
+        if var_info is None:
+            raise RuntimeError(f"variable {var_name!r} not found in symbol table")
+
+        base_addr, _var_size = var_info
+
+        # 如果未指定类型名，尝试从 DWARF 中推断
+        if type_name is None:
+            type_name = self._infer_variable_type(var_name)
+            if type_name is None:
+                raise RuntimeError(
+                    f"cannot infer type for {var_name!r}; "
+                    f"please specify type_name explicitly"
+                )
+
+        offset, final_type, final_size = self.resolve_member_offset(type_name, member_path)
+
+        return MemberAddress(
+            var_name=var_name,
+            member_path=member_path,
+            base_address=base_addr,
+            member_offset=offset,
+            address=base_addr + offset,
+            type_str=final_type,
+            sizeof=final_size,
+        )
+
+    def _infer_variable_type(self, var_name: str) -> Optional[str]:
+        """尝试从 DWARF 调试信息中推断全局变量的类型名。"""
+        for cu in self._dwarfinfo.iter_CUs():
+            for die in cu.iter_DIEs():
+                if die.tag != "DW_TAG_variable":
+                    continue
+                name_attr = die.attributes.get("DW_AT_name")
+                if not name_attr:
+                    continue
+                if self._attr_to_str(name_attr) != var_name:
+                    continue
+                tdie = self._die_from_type_attr(die)
+                if tdie is not None:
+                    return self.type_display_name(tdie)
+        return None
+
     def get_variable_info(self, var_name: str) -> Optional[Tuple[int, int]]:
         """
         从 ELF 符号表中通过变量名查找变量。

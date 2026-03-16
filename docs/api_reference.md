@@ -19,6 +19,61 @@ DwarfTypeExplorer(elf_path: str)
 - `type_byte_size(die)` — 计算类型字节大小
 - `type_display_name(die)` — 获取类型可读名称
 - `get_variable_info(var_name: str)` — 从符号表查找变量地址和大小，返回 `(address, size)` 元组
+- `resolve_member_offset(type_name: str, member_path: str)` — 沿点分路径逐层解析成员偏移，返回 `(offset, type_str, sizeof)` 元组
+- `get_member_address(var_name: str, member_path: str, type_name: str = None)` — 计算成员的运行时物理地址，返回 `MemberAddress` 对象
+
+---
+
+## `MemberAddress`
+
+成员地址解析结果，由 `get_member_address()` 返回。
+
+```python
+@dataclass
+class MemberAddress:
+    var_name: str          # 全局变量名
+    member_path: str       # 点分成员路径
+    base_address: int      # 变量基地址（来自符号表）
+    member_offset: int     # 成员在结构体内的累计字节偏移
+    address: int           # base_address + member_offset
+    type_str: str          # 最终成员的类型名
+    sizeof: int            # 最终成员的字节大小
+```
+
+### `resolve_member_offset()`
+
+```python
+resolve_member_offset(type_name: str, member_path: str) -> Tuple[int, str, int]
+```
+
+沿点分成员路径逐层解析结构体成员的偏移量。支持数组下标访问（如 `"arr[2].field"`）。
+
+**参数：**
+
+- `type_name` — 顶层类型名，如 `"Rsp_Params_t"`
+- `member_path` — 点分成员路径，如 `"RspFastTimeCmbCtrlParam.FftCtrl.cfg_fft_size"`
+
+**返回：** `(accumulated_offset, final_type_str, final_sizeof)`
+
+**异常：** 类型未找到或路径中成员不存在时抛出 `RuntimeError`
+
+### `get_member_address()`
+
+```python
+get_member_address(var_name: str, member_path: str, type_name: str = None) -> MemberAddress
+```
+
+获取全局变量中某个嵌套成员的运行时物理地址。
+
+**参数：**
+
+- `var_name` — 全局变量名，如 `"gRspCfg"`
+- `member_path` — 点分成员路径，如 `"RspFastTimeCmbCtrlParam.FftCtrl.cfg_fft_win_addr"`
+- `type_name` — 可选，变量的类型名。省略时从 DWARF 调试信息自动推断
+
+**返回：** `MemberAddress` 数据对象
+
+**异常：** 变量未在符号表中找到、类型无法推断或成员路径无效时抛出 `RuntimeError`
 
 ---
 
