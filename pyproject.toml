@@ -7,7 +7,7 @@ name = "arc-dwarf"
 version = "0.1.0"
 description = "ELF/DWARF debug info explorer with A2L calibration file support for embedded automotive systems"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.8"
 license = "MIT"
 authors = [
     { name = "rocket666" },

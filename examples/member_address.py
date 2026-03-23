@@ -14,9 +14,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from arc_dwarf import DwarfTypeExplorer
 
 ELF_FILE = "CPD_BPM_App_Core1.elf"
-VAR_NAME = "gRspCfg"
-TYPE_NAME = "Rsp_Params_t"
-MEMBER_PATH = "RspFastTimeCmbCtrlParam.FftCtrl.cfg_fft_win_addr"
+VAR_NAME = "gRadioCfg"
+TYPE_NAME = "Radio_Params_t"
+MEMBER_PATH = ""
 
 
 def main():

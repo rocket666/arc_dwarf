@@ -406,6 +406,10 @@ class DwarfTypeExplorer:
         if die is None:
             raise RuntimeError(f"type not found in DWARF: {type_name}")
 
+        # 空路径：直接返回类型本身的偏移 0
+        if not member_path:
+            return (0, self.type_display_name(die), self.type_byte_size(die))
+
         # 拆分路径："a.b[3].c" -> [("a", None), ("b", 3), ("c", None)]
         parts: List[Tuple[str, Optional[int]]] = []
         for token in member_path.split("."):
