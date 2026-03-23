@@ -44,3 +44,20 @@ DwarfTypeExplorer ──┤
 ### `formatting` — 格式化工具
 
 提供十六进制和字节数的格式化辅助函数。
+
+## 支持的目标架构
+
+底层解析依赖 `pyelftools`，凡是 `pyelftools` 支持的 ELF 架构均可直接使用，无需额外配置。已验证或明确支持的架构包括：
+
+| 架构 | ELF `e_machine` | 位宽 | 备注 |
+|---|---|---|---|
+| ARC (DesignWare) | `EM_ARC` | 32 | 原始目标平台 |
+| ARM / Thumb | `EM_ARM` | 32 | 含 Cortex-M 系列 |
+| AArch64 | `EM_AARCH64` | 64 | |
+| RISC-V | `EM_RISCV` | 32 / 64 | RV32 / RV64 均支持 |
+| x86 | `EM_386` | 32 | |
+| x86-64 | `EM_X86_64` | 64 | |
+| MIPS | `EM_MIPS` | 32 / 64 | |
+
+`pointer_size` 由 ELF class 自动推导（32-bit ELF → 4 字节，64-bit ELF → 8 字节）。
+可通过 `DwarfTypeExplorer.arch_info()` 在运行时确认目标架构信息。

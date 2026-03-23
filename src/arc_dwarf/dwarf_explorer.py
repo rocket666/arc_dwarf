@@ -46,6 +46,15 @@ class DwarfTypeExplorer:
             self._fp.close()
             self._fp = None
 
+    def arch_info(self) -> dict:
+        """Return architecture metadata derived from the ELF header."""
+        return {
+            "machine": self._elf.get_machine_arch(),
+            "bits": self._elf.elfclass,
+            "endian": "little" if self._elf.little_endian else "big",
+            "pointer_size": self.pointer_size,
+        }
+
     # -------------
     # Index & lookup
     # -------------
@@ -255,6 +264,20 @@ class DwarfTypeExplorer:
 
             if name == "DW_OP_stack_value":
                 continue
+
+            if name == "DW_OP_nop":
+                continue
+
+            if name == "DW_OP_addr":
+                stack.append(int(args[0]))
+                continue
+
+            if name.startswith("DW_OP_lit"):
+                try:
+                    stack.append(int(name[len("DW_OP_lit"):]))
+                    continue
+                except ValueError:
+                    pass
 
             return None
 
